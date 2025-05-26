@@ -172,7 +172,7 @@ function VulnAD-PwdInObjectDescription {
 function VulnAD-DefaultPassword {
     for ($i=1; $i -le (Get-Random -Maximum 5); $i=$i+1 ) {
         $randomuser = (VulnAD-GetRandom -InputList $Global:CreatedUsers)
-        $password = "Changeme123!";
+        $password = "Welcome1";
         Set-AdAccountPassword -Identity $randomuser -Reset -NewPassword (ConvertTo-SecureString $password -AsPlainText -Force)
         Set-ADUser $randomuser -Description "New User ,DefaultPassword"
         Set-AdUser $randomuser -ChangePasswordAtLogon $true
@@ -180,7 +180,7 @@ function VulnAD-DefaultPassword {
     }
 }
 function VulnAD-PasswordSpraying {
-    $same_password = "ncc1701";
+    $same_password = "Password123";
     for ($i=1; $i -le (Get-Random -Maximum 12); $i=$i+1 ) {
         $randomuser = (VulnAD-GetRandom -InputList $Global:CreatedUsers)
         Set-AdAccountPassword -Identity $randomuser -Reset -NewPassword (ConvertTo-SecureString $same_password -AsPlainText -Force)
@@ -214,6 +214,39 @@ function VulnAD-DCSync {
 function VulnAD-DisableSMBSigning {
     Set-SmbClientConfiguration -RequireSecuritySignature 0 -EnableSecuritySignature 0 -Confirm -Force
 }
+
+function VulnAD-EnableRemoteAccessForGroup {
+    Param(
+        [string]$GroupName = "IT Admins"
+    )
+
+    $targetGroup = "Remote Desktop Users"
+
+    Write-Info "➤ Menambahkan grup '$GroupName' ke dalam grup '$targetGroup'"
+    Try {
+        Add-ADGroupMember -Identity $targetGroup -Members $GroupName
+        Write-Good "'$GroupName' berhasil ditambahkan ke '$targetGroup'"
+    } Catch {
+        Write-Bad "Gagal menambahkan '$GroupName' ke '$targetGroup': $_"
+    }
+
+    Write-Info "➤ Mengaktifkan koneksi Remote Desktop (RDP)..."
+    Try {
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Write-Good "Koneksi RDP berhasil diaktifkan (fDenyTSConnections = 0)"
+    } Catch {
+        Write-Bad "Gagal mengaktifkan RDP: $_"
+    }
+
+    Write-Info "➤ Mengaktifkan Firewall Rule untuk Remote Desktop..."
+    Try {
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Write-Good "Firewall untuk Remote Desktop berhasil diaktifkan"
+    } Catch {
+        Write-Bad "Gagal mengaktifkan firewall RDP: $_"
+    }
+}
+
 function Invoke-VulnAD {
     Param(
         [int]$UsersLimit = 100,
@@ -251,4 +284,5 @@ function Invoke-VulnAD {
     Write-Good "DCSync Done"
     VulnAD-DisableSMBSigning
     Write-Good "SMB Signing Disabled"
+    VulnAD-EnableRemoteAccessForGroup -GroupName "IT Admins"
 }
