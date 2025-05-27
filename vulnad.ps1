@@ -217,17 +217,19 @@ function VulnAD-DisableSMBSigning {
 
 function VulnAD-EnableRemoteAccessForGroup {
     Param(
-        [string]$GroupName = "IT Admins"
+        [string[]]$GroupNames = @("IT Admins")
     )
 
     $targetGroup = "Remote Desktop Users"
 
-    Write-Info "➤ Menambahkan grup '$GroupName' ke dalam grup '$targetGroup'"
-    Try {
-        Add-ADGroupMember -Identity $targetGroup -Members $GroupName
-        Write-Good "'$GroupName' berhasil ditambahkan ke '$targetGroup'"
-    } Catch {
-        Write-Bad "Gagal menambahkan '$GroupName' ke '$targetGroup': $_"
+    foreach ($GroupName in $GroupNames) {
+        Write-Info "➤ Menambahkan grup '$GroupName' ke dalam grup '$targetGroup'"
+        Try {
+            Add-ADGroupMember -Identity $targetGroup -Members $GroupName
+            Write-Good "'$GroupName' berhasil ditambahkan ke '$targetGroup'"
+        } Catch {
+            Write-Bad "Gagal menambahkan '$GroupName' ke '$targetGroup': $_"
+        }
     }
 
     Write-Info "➤ Mengaktifkan koneksi Remote Desktop (RDP)..."
@@ -284,5 +286,5 @@ function Invoke-VulnAD {
     Write-Good "DCSync Done"
     VulnAD-DisableSMBSigning
     Write-Good "SMB Signing Disabled"
-    VulnAD-EnableRemoteAccessForGroup -GroupName "IT Admins"
+    VulnAD-EnableRemoteAccessForGroup -GroupNames @("IT Admins", "Office Admin")
 }
