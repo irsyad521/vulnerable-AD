@@ -247,7 +247,33 @@ function VulnAD-EnableRemoteAccessForGroup {
     } Catch {
         Write-Bad "Gagal mengaktifkan firewall RDP: $_"
     }
+
+    Write-Info "➤ Menambahkan grup '$targetGroup' ke SeRemoteInteractiveLogonRight (RDP Policy)..."
+    Try {
+        $sid = (New-Object System.Security.Principal.NTAccount($targetGroup)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+        $current = (secedit /export /cfg C:\secpol.cfg) | Out-Null
+        $lines = Get-Content "C:\secpol.cfg"
+        $index = $lines.IndexOf("SeRemoteInteractiveLogonRight = *$sid")
+        if ($index -eq -1) {
+            $lines = $lines | ForEach-Object {
+                if ($_ -like "SeRemoteInteractiveLogonRight*") {
+                    "$_,$sid"
+                } else {
+                    $_
+                }
+            }
+            $lines | Set-Content "C:\secpol.cfg"
+            secedit /configure /db secedit.sdb /cfg C:\secpol.cfg /quiet
+            Remove-Item "C:\secpol.cfg" -Force
+            Write-Good "Policy SeRemoteInteractiveLogonRight berhasil diperbarui dengan SID $sid"
+        } else {
+            Write-Good "Grup sudah ada di SeRemoteInteractiveLogonRight"
+        }
+    } Catch {
+        Write-Bad "Gagal memperbarui policy RDP (SeRemoteInteractiveLogonRight): $_"
+    }
 }
+
 
 function Invoke-VulnAD {
     Param(
