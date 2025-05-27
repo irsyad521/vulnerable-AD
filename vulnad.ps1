@@ -274,9 +274,9 @@ function VulnAD-EnableRemoteAccessForGroup {
     }
 }
 
-function Create-BackupOperatorUser {
+function Create-OperatorUser {
     param (
-        [string]$Username = "localbackup",
+        [string]$Username = "operator",
         [string]$Password = "butterfly2025"
     )
 
@@ -285,17 +285,17 @@ function Create-BackupOperatorUser {
         $securePass = ConvertTo-SecureString $Password -AsPlainText -Force
 
         # Buat user lokal
-        New-LocalUser -Name $Username -Password $securePass -FullName "Local Backup User" -Description "User for Backup Operations" -ErrorAction Stop
+        New-LocalUser -Name $Username -Password $securePass -FullName "Operator Account" -Description "User for Operator group" -ErrorAction Stop
 
-        # Tambahkan ke grup menggunakan net.exe agar kompatibel di semua sistem
-        net localgroup "Backup Operators" $Username /add | Out-Null
+        # Tambahkan ke grup "Account Operators" pakai net.exe
+        net localgroup "Account Operators" $Username /add | Out-Null
 
         # Simpan kredensial ke file
         $creds = "Username: $Username`nPassword: $Password"
-        $filePath = "C:\Users\Public\Documents\localbackup-cred.txt"
+        $filePath = "C:\Users\Public\Documents\operator-cred.txt"
         $creds | Out-File -FilePath $filePath -Encoding ASCII
 
-        Write-Output "[+] User $Username created and added to Backup Operators. Credentials saved to $filePath"
+        Write-Output "[+] User $Username created and added to Account Operators. Credentials saved to $filePath"
     }
     catch {
         Write-Warning "[-] Error: $($_.Exception.Message)"
@@ -342,5 +342,5 @@ function Invoke-VulnAD {
     VulnAD-DisableSMBSigning
     Write-Good "SMB Signing Disabled"
     VulnAD-EnableRemoteAccessForGroup -GroupNames @("IT Admins", "Office Admin")
-    Create-BackupOperatorUser
+    Create-OperatorUser
 }
